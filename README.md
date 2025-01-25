@@ -9,3 +9,8 @@ That’s why I decided to build USCabs.
 This app is designed to help USC students plan ahead—find a group to split a cab with, coordinate ride times, and head to the airport with fellow Trojans. Along the way, you might even meet some new people and make friends on campus.
 
 As a transfer student myself, I know how hard it can be to connect with others, so I wanted this app to offer a little extra: a way to meet other students in a casual, practical setting. Because who knows? A shared cab ride could turn into a shared campus experience.
+
+
+
+https://github.com/user-attachments/assets/0437a89d-6abc-489a-9616-349a1cb014c7
+
