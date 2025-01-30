@@ -8,6 +8,12 @@ This app is designed to help USC students plan ahead—find a group to split a c
 
 As a transfer student myself, I know how hard it can be to connect with others, so I wanted this app to offer a little extra: a way to meet other students in a casual, practical setting. Because who knows? A shared cab ride could turn into a shared campus experience.
 
+lo-fis:
+<img width="319" alt="Screenshot 2025-01-25 at 2 49 02 PM" src="https://github.com/user-attachments/assets/ffdd94a8-1d01-4117-9422-2ce32a39a9c9" />
+<img width="320" alt="Screenshot 2025-01-25 at 2 48 49 PM" src="https://github.com/user-attachments/assets/63e791fd-3f2a-4e58-a885-9c70d94d6eb7" />
+<img width="319" alt="Screenshot 2025-01-25 at 2 48 40 PM" src="https://github.com/user-attachments/assets/d6900294-750c-4250-8b6d-d123b704f2b6" />
+<img width="320" alt="Screenshot 2025-01-25 at 2 48 26 PM" src="https://github.com/user-attachments/assets/cf4d112f-0f52-459e-bcd9-01c15e6de396" />
+<img width="321" alt="Screenshot 2025-01-25 at 2 48 06 PM" src="https://github.com/user-attachments/assets/d7936f74-ac2b-4432-b13b-d75a3df385df" />
 
 
 https://github.com/user-attachments/assets/0437a89d-6abc-489a-9616-349a1cb014c7
