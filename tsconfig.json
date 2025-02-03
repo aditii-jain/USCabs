@@ -7,14 +7,18 @@
         "./*"
       ]
     },
-    "types": ["node", "./types/env.d.ts"],
+    "types": [
+      "node",
+      "./types/env.d.ts"
+    ],
     "esModuleInterop": true
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "types/env.d.ts"
+    "exponpm install expo-splash-screen --save-env.d.ts",
+    "types/env.d.ts",
+    "expo-env.d.ts"
   ]
 }
