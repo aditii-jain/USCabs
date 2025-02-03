@@ -11,6 +11,7 @@ import {
   TouchableWithoutFeedback,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "../lib/supabase";
@@ -26,6 +27,8 @@ export default function HomeScreen() {
   const [fullName, setFullName] = useState("User");
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [showHomeContent, setShowHomeContent] = useState(false);
 
   const airports = ["LAX", "BUR", "LGB", "SNA", "HHR"];
   const times = Array.from({ length: 48 }).map((_, index) => {
@@ -58,6 +61,45 @@ export default function HomeScreen() {
     };
 
     fetchUserProfile();
+  }, []);
+
+  useEffect(() => {
+    const checkActiveGroup = async () => {
+      try {
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+
+        if (user) {
+          // Check if user has an active car group
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('active_car_id')
+            .eq('id', user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          if (profile?.active_car_id) {
+            // Redirect to messaging if user has an active group
+            router.replace({
+              pathname: '/messaging',
+              params: { carId: profile.active_car_id }
+            });
+          } else {
+            // Only show home content if there's no active group
+            setShowHomeContent(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking active group:', error);
+        setShowHomeContent(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkActiveGroup();
   }, []);
 
   // CHANGED: Added validation and parsing for `time`
@@ -215,6 +257,18 @@ export default function HomeScreen() {
     setModalVisible(false);
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  if (!showHomeContent) {
+    return null; // Return empty screen while redirecting
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={100}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -274,6 +328,12 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     justifyContent: "center",
