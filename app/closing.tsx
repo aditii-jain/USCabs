@@ -1,17 +1,49 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, Image, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { supabase } from '../lib/supabase';
 
 export default function Closing() {
   const router = useRouter();
+  const { carId } = useLocalSearchParams<{ carId: string }>();
 
   useEffect(() => {
+    const cleanup = async () => {
+      try {
+        // Make sure carId is valid
+        if (!carId) {
+          console.error('No carId provided');
+          router.replace('/home'); // Redirect to home if no carId
+          return;
+        }
+
+        // Call the database function with the correct parameter name
+        const { error } = await supabase
+          .rpc('delete_car_and_associated_data', {
+            car_id_param: carId
+          });
+
+        if (error) {
+          console.error('Error cleaning up car data:', error);
+          Alert.alert('Error', 'Failed to cleanup chat data');
+          router.replace('/home');
+          return;
+        }
+      } catch (error) {
+        console.error('Error in cleanup:', error);
+      }
+    };
+
+    // Perform cleanup
+    cleanup();
+
+    // Set timeout to navigate back to home
     const timeout = setTimeout(() => {
       router.replace('/home');
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [carId, router]);
 
   return (
     <View style={styles.container}>
