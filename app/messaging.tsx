@@ -15,20 +15,29 @@ import {
   Alert,
   Image,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../lib/supabase";
 import MessageBubble from "../components/MessageBubble";
 import { Message } from "../types/database"; // Import your interface
 import { router } from 'expo-router';
 
+interface MessageWithUser extends Message {
+  profiles?: {
+    full_name: string;
+  };
+}
+
 export default function Messaging() {
+  // Get the car ID from route parameters
   const { carId } = useLocalSearchParams<{ carId: string }>();
-  const [messages, setMessages] = useState<Message[]>([]); // Use the imported type
+  // State management
+  const [messages, setMessages] = useState<MessageWithUser[]>([]);
   const [newMessage, setNewMessage] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
+  // Reference to scroll messages to bottom
   const flatListRef = useRef<FlatList>(null);
 
-  // Fetch user ID
+  // Fetch current user's ID on component mount
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -42,12 +51,18 @@ export default function Messaging() {
     fetchUser();
   }, []);
 
-  // Fetch messages for the car group
+  // Set up real-time messaging
   useEffect(() => {
+    // Initial fetch of existing messages with user profiles
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            full_name
+          )
+        `)
         .eq("car_id", carId)
         .order("sent_at", { ascending: true });
       
@@ -60,7 +75,7 @@ export default function Messaging() {
 
     fetchMessages();
 
-    // Updated subscription
+    // Set up real-time subscription for new messages
     const channel = supabase
       .channel('public:messages')
       .on(
@@ -71,21 +86,31 @@ export default function Messaging() {
           table: 'messages',
           filter: `car_id=eq.${carId}`,
         },
-        (payload) => {
-          console.log('New message received:', payload); // Debug log
-          setMessages((current) => [...current, payload.new as Message]);
+        async (payload) => {
+          // Fetch the user profile for the new message
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", payload.new.user_id)
+            .single();
+
+          const messageWithUser = {
+            ...payload.new,
+            profiles: profileData
+          } as MessageWithUser;
+
+          setMessages((current) => [...current, messageWithUser]);
         }
       )
-      .subscribe((status) => {
-        console.log('Subscription status:', status); // Debug log
-      });
+      .subscribe();
 
+    // Cleanup subscription on unmount
     return () => {
       channel.unsubscribe();
     };
   }, [carId]);
 
-  // Send a new message
+  // Handle sending new messages
   const sendMessage = async () => {
     if (!newMessage.trim() || !userId) return;
 
@@ -103,12 +128,13 @@ export default function Messaging() {
     if (error) {
       console.error("Error sending message:", error);
     } else {
-      setNewMessage(""); // Clear input after sending
-      // Use Date.now() + random number for temporary ID
+      setNewMessage(""); // Clear input
+      // Add message to local state with temporary ID
       setMessages((current) => [...current, { ...newMessageData, id: `temp-${Date.now()}-${Math.random()}` }]);
     }
   };
 
+  // Handle initiating the payment split process
   const handleSplitPress = () => {
     Alert.alert(
       "Start Split Process",
@@ -129,11 +155,34 @@ export default function Messaging() {
     );
   };
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace("/"); // Navigate to landing page
+    } catch (error) {
+      console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        {/* Header Row with Split Button */}
+        {/* Header Row with Split Button and Sign Out */}
         <View style={styles.headerRow}>
+          {/* Sign Out Button */}
+          <TouchableOpacity 
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+
+          {/* Spacer to push split button to right */}
+          <View style={styles.headerSpacer} />
+
+          {/* Split Button */}
           <TouchableOpacity 
             style={styles.splitButton}
             onPress={handleSplitPress}
@@ -151,11 +200,19 @@ export default function Messaging() {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <MessageBubble
-              content={item.content}
-              isOwnMessage={item.user_id === userId}
-              sentAt={item.sent_at}
-            />
+            <View>
+              {/* Show sender's name only for received messages */}
+              {item.user_id !== userId && item.profiles && (
+                <Text style={styles.senderName}>
+                  {item.profiles.full_name}
+                </Text>
+              )}
+              <MessageBubble
+                content={item.content}
+                isOwnMessage={item.user_id === userId}
+                sentAt={item.sent_at}
+              />
+            </View>
           )}
           contentContainerStyle={styles.flatListContent}
           onContentSizeChange={() => {
@@ -196,12 +253,22 @@ const styles = StyleSheet.create({
   headerRow: {
     height: 50,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  signOutButton: {
+    padding: 8,
+  },
+  signOutText: {
+    color: '#007AFF',
+    fontSize: 16,
   },
   splitButton: {
     padding: 8,
@@ -248,5 +315,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  senderName: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 10,
+    marginBottom: 2,
   },
 });
