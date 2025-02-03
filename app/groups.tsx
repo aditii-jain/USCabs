@@ -7,36 +7,36 @@ const MAX_CAPACITY = 4;
 
 export default function Groups() {
   const router = useRouter();
-  const { selectedTime, airportId, terminalId } = useLocalSearchParams(); // Use `useLocalSearchParams`
+  const { selectedTime, airportId, terminalId } = useLocalSearchParams();
   const [groups, setGroups] = useState<
     { id: string; departure_time: string; user_ids: string[] }[]
   >([]);
 
   useEffect(() => {
     const fetchFilteredGroups = async () => {
-        try {
-          const baseTimestamp = new Date(selectedTime as string).getTime();
-      
-          const { data: cars, error } = await supabase
-            .from("cars")
-            .select("id, departure_time, user_ids")
-            .eq("airport_id", airportId)
-            .eq("terminal_id", terminalId)
-            .gte(
-              "departure_time",
-              new Date(baseTimestamp - 60 * 60 * 1000).toISOString() // 1 hour before
-            )
-            .lte(
-              "departure_time",
-              new Date(baseTimestamp + 60 * 60 * 1000).toISOString() // 1 hour after
-            );
-      
-          if (error) throw error;
-          setGroups(cars || []);
-        } catch (error) {
-          console.error("Error fetching filtered groups:", error);
-        }
-      };
+      try {
+        const baseTimestamp = new Date(selectedTime as string).getTime();
+    
+        const { data: cars, error } = await supabase
+          .from("cars")
+          .select("id, departure_time, user_ids")
+          .eq("airport_id", airportId)
+          .eq("terminal_id", terminalId)
+          .gte(
+            "departure_time",
+            new Date(baseTimestamp - 60 * 60 * 1000).toISOString() // 1 hour before
+          )
+          .lte(
+            "departure_time",
+            new Date(baseTimestamp + 60 * 60 * 1000).toISOString() // 1 hour after
+          );
+    
+        if (error) throw error;
+        setGroups(cars || []);
+      } catch (error) {
+        console.error("Error fetching filtered groups:", error);
+      }
+    };
 
     if (selectedTime && airportId && terminalId) {
       fetchFilteredGroups();
@@ -48,18 +48,13 @@ export default function Groups() {
 
   const handleGroupSelect = async (groupId: string) => {
     try {
-      // Fetch the current user
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         Alert.alert("Error", "Unable to fetch the logged-in user.");
         return;
       }
   
-      // Append the user ID to the `user_ids` array for the selected car group
-      const { error } = await supabase.rpc("append_user_to_group", {
+      const { data, error } = await supabase.rpc("append_user_to_group", {
         car_id: groupId,
         user_id: user.id,
       });
@@ -69,11 +64,23 @@ export default function Groups() {
         Alert.alert("Error", "Failed to join the group. Please try again.");
         return;
       }
+
+      if (!data.success) {
+        if (data.message === 'User is already in this group') {
+          Alert.alert("Already Joined", "You are already in this group.");
+          router.push({
+            pathname: "/messaging",
+            params: { carId: groupId },
+          });
+          return;
+        }
+        Alert.alert("Error", data.message);
+        return;
+      }
   
-      // Redirect to the joining page and pass the carId
       router.push({
         pathname: "/redirecting/joining",
-        params: { carId: groupId }, // Pass carId as a query parameter
+        params: { carId: groupId },
       });
     } catch (error) {
       console.error("Error handling group selection:", error);
