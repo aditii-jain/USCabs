@@ -9,7 +9,18 @@ export default function Split() {
   const { carId, totalAmount } = useLocalSearchParams<{ carId: string; totalAmount: string }>();
   const [users, setUsers] = useState<UserWithPayment[]>([]);
   const [splitAmount, setSplitAmount] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  // Fetch current user's ID on component mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    fetchCurrentUser();
+  }, []);
+
+  // Get payment status for other users only
   const getPaymentStatus = (userId: string) => {
     return users.find(user => user.id === userId)?.hasPaid || false;
   };
@@ -17,6 +28,7 @@ export default function Split() {
   useEffect(() => {
     const fetchGroupMembers = async () => {
       try {
+        // Get car data with user IDs
         const { data: carData, error: carError } = await supabase
           .from('cars')
           .select('user_ids')
@@ -25,14 +37,17 @@ export default function Split() {
 
         if (carError) throw carError;
 
+        // Get profiles for all users except current user
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, full_name, venmo_username, updated_at, usc_email')
-          .in('id', carData.user_ids);
+          .in('id', carData.user_ids)
+          .neq('id', currentUserId); // Exclude current user
 
         if (profilesError) throw profilesError;
 
         const amount = parseFloat(totalAmount);
+        // Split amount by total number of users (including current user)
         const perPersonAmount = amount / carData.user_ids.length;
 
         setUsers(profiles.map(profile => ({
@@ -46,8 +61,10 @@ export default function Split() {
       }
     };
 
-    fetchGroupMembers();
-  }, [carId, totalAmount]);
+    if (currentUserId) { // Only fetch when we have the current user's ID
+      fetchGroupMembers();
+    }
+  }, [carId, totalAmount, currentUserId]);
 
   const togglePayment = async (userId: string) => {
     try {
@@ -56,14 +73,17 @@ export default function Split() {
         user.id === userId ? { ...user, hasPaid: !user.hasPaid } : user
       ));
 
-      // Check if everyone has paid after toggling
+      // Check if everyone has paid
       const allPaid = users.every(user => 
         user.id === userId ? !user.hasPaid : user.hasPaid
       );
 
       if (allPaid) {
-        // Redirect to closing screen
-        router.push('/closing');
+        // Pass carId when navigating to closing screen
+        router.push({
+          pathname: '/closing',
+          params: { carId }
+        });
       }
     } catch (error) {
       console.error('Error updating payment status:', error);
@@ -93,7 +113,7 @@ export default function Split() {
             style={styles.headerIcon} 
           />
           <Text style={styles.subheader}>
-            splitting {users.length} ways...
+            splitting {users.length + 1} ways... {/* +1 for current user */}
           </Text>
         </View>
 
