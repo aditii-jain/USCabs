@@ -33,20 +33,39 @@ export default function EmailForm({ type }: { type: "signup" | "signin" }) {
 
     try {
       if (type === "signup") {
-        const { error } = await supabase.auth.signUp({
+        if (fullName.length < 3) {
+          Alert.alert("Invalid name", "Name must be at least 3 characters long.");
+          return;
+        }
+
+        // Sign up without email confirmation
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               full_name: fullName,
-              venmo_username: venmoUsername,
+              venmo_username: venmoUsername || null
             },
-            emailRedirectTo: "uscabs://auth-callback",
-          },
+            emailRedirectTo: undefined 
+          }
         });
-        if (error) throw error;
-        Alert.alert("Success", "Please check your USC email for verification.");
+        
+        if (signUpError) throw signUpError;
+        
+        if (user) {
+          // Sign in immediately after signup
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (signInError) throw signInError;
+          
+          router.push("/home");
+        }
       } else {
+        // Regular sign in
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -56,7 +75,13 @@ export default function EmailForm({ type }: { type: "signup" | "signin" }) {
         router.push("/home");
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      console.error('Authentication error:', error);
+      Alert.alert(
+        "Error", 
+        error.message === 'Password should be at least 6 characters' 
+          ? error.message 
+          : 'Failed to process your request. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -66,7 +91,7 @@ export default function EmailForm({ type }: { type: "signup" | "signin" }) {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior="padding"
-      keyboardVerticalOffset={100} // Adjust offset if needed
+      keyboardVerticalOffset={100}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
