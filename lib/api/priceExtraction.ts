@@ -10,8 +10,6 @@ export async function extractPriceFromImage(imageUri: string): Promise<number | 
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    console.log('Image loaded, attempting OCR...');
-
     const formData = new FormData();
     formData.append('base64Image', `data:image/jpeg;base64,${base64Image}`);
     formData.append('language', 'eng');
@@ -29,7 +27,6 @@ export async function extractPriceFromImage(imageUri: string): Promise<number | 
     });
 
     const data = await response.json();
-    console.log('OCR Response:', data);
 
     if (data.ParsedResults && data.ParsedResults.length > 0) {
       const text = data.ParsedResults[0].ParsedText;
