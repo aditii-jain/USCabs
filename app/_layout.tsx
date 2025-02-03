@@ -1,33 +1,33 @@
-import { Stack } from "expo-router";
-import * as Linking from "expo-linking";
-import { useEffect } from "react";
-import { useRouter } from "expo-router";
+import { Stack } from "expo-router"; // Import Expo Router's stack navigation
 
+/**
+ * RootLayout defines the main navigation structure of the app using Expo Router.
+ * It organizes screens into a stack-based navigation system.
+ */
 export default function RootLayout() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const handleDeepLink = ({ url }: { url: string }) => {
-      const { path } = Linking.parse(url);
-      if (path === "auth-callback") {
-        // Navigate to home screen after successful verification
-        router.replace("/home");
-      }
-    };
-
-    const subscription = Linking.addEventListener("url", handleDeepLink);
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: "Home" }} />
-      <Stack.Screen name="auth/SignUp" options={{ title: "Sign Up" }} />
-      <Stack.Screen name="auth/SignIn" options={{ title: "Sign In" }} />
-      <Stack.Screen name="home" options={{ title: "Home" }} />
+      {/* Landing page: This is the main entry point of the app */}
+      <Stack.Screen 
+        name="index" 
+        options={{ title: "Home" }} 
+      />
+      
+      {/* Authentication screens for user login and registration */}
+      <Stack.Screen 
+        name="auth/SignUp" 
+        options={{ title: "Sign Up" }} 
+      />
+      <Stack.Screen 
+        name="auth/SignIn" 
+        options={{ title: "Sign In" }} 
+      />
+      
+      {/* Main authenticated home screen after successful login */}
+      <Stack.Screen 
+        name="home" 
+        options={{ title: "Home" }} 
+      />
     </Stack>
   );
 }
