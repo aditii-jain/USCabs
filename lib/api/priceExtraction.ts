@@ -1,5 +1,7 @@
 import * as FileSystem from 'expo-file-system';
-import { OCR_SPACE_API_KEY } from '@env';
+
+// Remove @env import and use process.env directly
+const apiKey = process.env.EXPO_PUBLIC_OCR_SPACE_API_KEY;
 
 export async function extractPriceFromImage(imageUri: string): Promise<number | null> {
   try {
@@ -20,7 +22,8 @@ export async function extractPriceFromImage(imageUri: string): Promise<number | 
     const response = await fetch('https://api.ocr.space/parse/image', {
       method: 'POST',
       headers: {
-        'apikey': OCR_SPACE_API_KEY,
+        'apikey': apiKey || '',
+        'Content-Type': 'multipart/form-data'
       },
       body: formData,
     });
@@ -30,16 +33,13 @@ export async function extractPriceFromImage(imageUri: string): Promise<number | 
 
     if (data.ParsedResults && data.ParsedResults.length > 0) {
       const text = data.ParsedResults[0].ParsedText;
-      console.log('Extracted text:', text);
 
       // Look for price patterns (e.g., $XX.XX)
       const priceRegex = /\$\d+\.\d{2}/g;
       const matches = text.match(priceRegex);
-      console.log('Price matches:', matches);
 
       if (matches && matches.length > 0) {
         const price = parseFloat(matches[0].replace('$', ''));
-        console.log('Final extracted price:', price);
         return price;
       }
     }
